@@ -1,0 +1,35 @@
+# ==========================================
+# Java / Maven ignores
+# ==========================================
+backend/target/
+backend/*.class
+backend/.mvn/
+backend/.flattened-pom.xml
+backend/mvnw
+backend/mvnw.cmd
+
+# ==========================================
+# Frontend / Node ignores
+# ==========================================
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# ==========================================
+# IDE & System Files
+# ==========================================
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
