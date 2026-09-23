@@ -30,6 +30,11 @@ public class MovieBoxOfficeReport {
     // Hourly tracking trend
     private List<HourlyTrendPoint> hourlyTrends;
 
+    // Multi-Date & Platform Filtering metadata
+    private List<String> availableDates;
+    private String selectedDate;
+    private String selectedPlatform;
+
     public MovieBoxOfficeReport() {}
 
     public MovieBoxOfficeReport(String movieId, String movieTitle, String trackingDay, 
@@ -41,6 +46,25 @@ public class MovieBoxOfficeReport {
                                 List<CityCircuitStats> circuits, 
                                 List<PlatformShare> platformShares, 
                                 List<HourlyTrendPoint> hourlyTrends) {
+        this(movieId, movieTitle, trackingDay, asOfTime, totalShows, totalSeats, bookedSeats, 
+             overallOccupancyPct, totalGrossInr, totalGrossCrores, averageTicketPrice, 
+             ticketsBookedLastHour, statusBreakdown, circuits, platformShares, hourlyTrends, 
+             List.of("2026-09-23", "2026-09-24", "2026-09-25", "2026-09-26", "2026-09-27"), 
+             "ALL", "ALL");
+    }
+
+    public MovieBoxOfficeReport(String movieId, String movieTitle, String trackingDay, 
+                                String asOfTime, int totalShows, int totalSeats, 
+                                int bookedSeats, double overallOccupancyPct, 
+                                double totalGrossInr, double totalGrossCrores, 
+                                double averageTicketPrice, int ticketsBookedLastHour, 
+                                ShowStatusBreakdown statusBreakdown, 
+                                List<CityCircuitStats> circuits, 
+                                List<PlatformShare> platformShares, 
+                                List<HourlyTrendPoint> hourlyTrends,
+                                List<String> availableDates,
+                                String selectedDate,
+                                String selectedPlatform) {
         this.movieId = movieId;
         this.movieTitle = movieTitle;
         this.trackingDay = trackingDay;
@@ -57,6 +81,33 @@ public class MovieBoxOfficeReport {
         this.circuits = circuits;
         this.platformShares = platformShares;
         this.hourlyTrends = hourlyTrends;
+        this.availableDates = availableDates;
+        this.selectedDate = selectedDate;
+        this.selectedPlatform = selectedPlatform;
+    }
+
+    public List<String> getAvailableDates() {
+        return availableDates;
+    }
+
+    public void setAvailableDates(List<String> availableDates) {
+        this.availableDates = availableDates;
+    }
+
+    public String getSelectedDate() {
+        return selectedDate;
+    }
+
+    public void setSelectedDate(String selectedDate) {
+        this.selectedDate = selectedDate;
+    }
+
+    public String getSelectedPlatform() {
+        return selectedPlatform;
+    }
+
+    public void setSelectedPlatform(String selectedPlatform) {
+        this.selectedPlatform = selectedPlatform;
     }
 
     public String getMovieId() {

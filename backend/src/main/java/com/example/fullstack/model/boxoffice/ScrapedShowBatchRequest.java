@@ -5,6 +5,7 @@ public class ScrapedShowBatchRequest {
     private String movieTitle;
     private String city;
     private String platform; // "BookMyShow", "District", "PVR"
+    private String showDate = "2026-09-23"; // YYYY-MM-DD
     private int additionalShows;
     private int totalSeatsInBatch;
     private int additionalSeatsBooked;
@@ -20,10 +21,20 @@ public class ScrapedShowBatchRequest {
                                   int additionalSeatsBooked, int soldOutShows, 
                                   int fastFillingShows, int availableShows, 
                                   double additionalGrossInr) {
+        this(movieId, movieTitle, city, platform, "2026-09-23", additionalShows, totalSeatsInBatch, 
+             additionalSeatsBooked, soldOutShows, fastFillingShows, availableShows, additionalGrossInr);
+    }
+
+    public ScrapedShowBatchRequest(String movieId, String movieTitle, String city, String platform, 
+                                  String showDate, int additionalShows, int totalSeatsInBatch, 
+                                  int additionalSeatsBooked, int soldOutShows, 
+                                  int fastFillingShows, int availableShows, 
+                                  double additionalGrossInr) {
         this.movieId = movieId;
         this.movieTitle = movieTitle;
         this.city = city;
         this.platform = platform;
+        this.showDate = showDate != null && !showDate.isBlank() ? showDate : "2026-09-23";
         this.additionalShows = additionalShows;
         this.totalSeatsInBatch = totalSeatsInBatch;
         this.additionalSeatsBooked = additionalSeatsBooked;
@@ -31,6 +42,14 @@ public class ScrapedShowBatchRequest {
         this.fastFillingShows = fastFillingShows;
         this.availableShows = availableShows;
         this.additionalGrossInr = additionalGrossInr;
+    }
+
+    public String getShowDate() {
+        return showDate;
+    }
+
+    public void setShowDate(String showDate) {
+        this.showDate = showDate;
     }
 
     public String getMovieId() {

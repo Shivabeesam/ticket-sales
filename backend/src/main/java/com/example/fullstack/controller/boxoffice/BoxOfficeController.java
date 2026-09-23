@@ -42,7 +42,7 @@ public class BoxOfficeController {
     @DeleteMapping("/reset")
     public ResponseEntity<Map<String, String>> resetAll() {
         trackingService.resetAllData();
-        return ResponseEntity.ok(Map.of("status", "SUCCESS", "message", "All data reset"));
+        return ResponseEntity.ok(Map.of("status", "SUCCESS", "message", "All data reset and running movies re-seeded"));
     }
 
     @GetMapping("/movies/{id}/report")
@@ -57,6 +57,37 @@ public class BoxOfficeController {
         return trackingService.getMovieReport(id)
                 .map(r -> ResponseEntity.ok(r.getCircuits()))
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/movies/{id}/live-events")
+    public ResponseEntity<List<LiveBookingEvent>> getLiveEvents(@PathVariable String id) {
+        return ResponseEntity.ok(trackingService.getLiveEvents(id));
+    }
+
+    @PostMapping("/movies/{id}/sync-live")
+    public ResponseEntity<Map<String, Object>> syncLiveShows(@PathVariable String id) {
+        Map<String, Object> result = trackingService.syncLiveCircuitScrape(id);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/discover-running")
+    public ResponseEntity<List<BoxOfficeMovie>> discoverRunningMovies() {
+        trackingService.discoverRunningMovies();
+        return ResponseEntity.ok(trackingService.getTrackedMovies());
+    }
+
+    @GetMapping("/engine/status")
+    public ResponseEntity<Map<String, Object>> getEngineStatus() {
+        return ResponseEntity.ok(Map.of("active", trackingService.isEngineActive()));
+    }
+
+    @PostMapping("/engine/toggle")
+    public ResponseEntity<Map<String, Object>> toggleEngine() {
+        boolean active = trackingService.toggleEngine();
+        return ResponseEntity.ok(Map.of(
+                "active", active,
+                "message", active ? "Live streaming engine resumed" : "Live streaming engine paused"
+        ));
     }
 
     @PostMapping("/ingest")
