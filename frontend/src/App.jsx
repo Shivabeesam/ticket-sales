@@ -1,38 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  CheckCircle2, 
+  Ticket as TicketIcon, 
+  DollarSign, 
+  CheckCircle, 
   Clock, 
-  Layers, 
   Plus, 
   Search, 
   Trash2, 
   Edit3, 
   RefreshCw,
-  Server,
-  AlertCircle
+  ShoppingBag,
+  User,
+  Sparkles
 } from 'lucide-react';
 import StatsCard from './components/StatsCard';
-import TaskModal from './components/TaskModal';
+import TicketModal from './components/TicketModal';
 
 export default function App() {
-  const [tasks, setTasks] = useState([]);
-  const [stats, setStats] = useState({ total: 0, completed: 0, inProgress: 0, pending: 0 });
+  const [tickets, setTickets] = useState([]);
+  const [stats, setStats] = useState({ total: 0, available: 0, reserved: 0, sold: 0, totalRevenue: 0 });
   const [loading, setLoading] = useState(true);
   const [serverOnline, setServerOnline] = useState(false);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
+  const [filterType, setFilterType] = useState('ALL');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState(null);
+  const [editingTicket, setEditingTicket] = useState(null);
 
   // Fetch backend data
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [healthRes, tasksRes, statsRes] = await Promise.allSettled([
+      const [healthRes, ticketsRes, statsRes] = await Promise.allSettled([
         fetch('/api/health'),
-        fetch('/api/tasks'),
-        fetch('/api/tasks/stats'),
+        fetch('/api/tickets'),
+        fetch('/api/tickets/stats'),
       ]);
 
       if (healthRes.status === 'fulfilled' && healthRes.value.ok) {
@@ -41,9 +44,9 @@ export default function App() {
         setServerOnline(false);
       }
 
-      if (tasksRes.status === 'fulfilled' && tasksRes.value.ok) {
-        const tasksData = await tasksRes.value.json();
-        setTasks(tasksData);
+      if (ticketsRes.status === 'fulfilled' && ticketsRes.value.ok) {
+        const ticketsData = await ticketsRes.value.json();
+        setTickets(ticketsData);
       }
 
       if (statsRes.status === 'fulfilled' && statsRes.value.ok) {
@@ -62,14 +65,14 @@ export default function App() {
     fetchData();
   }, []);
 
-  const handleSaveTask = async (taskData) => {
+  const handleSaveTicket = async (ticketData) => {
     try {
-      if (taskData.id) {
+      if (ticketData.id) {
         // Update
-        const res = await fetch(`/api/tasks/${taskData.id}`, {
+        const res = await fetch(`/api/tickets/${ticketData.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(taskData),
+          body: JSON.stringify(ticketData),
         });
         if (res.ok) {
           fetchData();
@@ -77,10 +80,10 @@ export default function App() {
         }
       } else {
         // Create
-        const res = await fetch('/api/tasks', {
+        const res = await fetch('/api/tickets', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(taskData),
+          body: JSON.stringify(ticketData),
         });
         if (res.ok) {
           fetchData();
@@ -88,47 +91,49 @@ export default function App() {
         }
       }
     } catch (err) {
-      console.error('Error saving task:', err);
+      console.error('Error saving ticket:', err);
     }
   };
 
-  const handleDeleteTask = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this task?')) return;
+  const handleDeleteTicket = async (id) => {
+    if (!window.confirm('Are you sure you want to remove this ticket listing?')) return;
     try {
-      const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/tickets/${id}`, { method: 'DELETE' });
       if (res.ok) {
         fetchData();
       }
     } catch (err) {
-      console.error('Error deleting task:', err);
+      console.error('Error deleting ticket:', err);
     }
   };
 
-  const handleToggleStatus = async (task) => {
-    const nextStatus = 
-      task.status === 'PENDING' ? 'IN_PROGRESS' : 
-      task.status === 'IN_PROGRESS' ? 'COMPLETED' : 'PENDING';
-    
+  const handleQuickStatus = async (ticket, nextStatus, buyer = null) => {
     try {
-      const res = await fetch(`/api/tasks/${task.id}`, {
+      const payload = { ...ticket, status: nextStatus };
+      if (buyer) payload.buyerName = buyer;
+      if (nextStatus === 'AVAILABLE') payload.buyerName = null;
+
+      const res = await fetch(`/api/tickets/${ticket.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...task, status: nextStatus }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         fetchData();
       }
     } catch (err) {
-      console.error('Error toggling status:', err);
+      console.error('Error updating status:', err);
     }
   };
 
-  const filteredTasks = tasks.filter((t) => {
+  const filteredTickets = tickets.filter((t) => {
     const matchesSearch = 
-      t.title.toLowerCase().includes(search.toLowerCase()) ||
-      (t.description && t.description.toLowerCase().includes(search.toLowerCase()));
-    const matchesFilter = filterStatus === 'ALL' || t.status === filterStatus;
-    return matchesSearch && matchesFilter;
+      t.eventName.toLowerCase().includes(search.toLowerCase()) ||
+      (t.buyerName && t.buyerName.toLowerCase().includes(search.toLowerCase())) ||
+      (t.seatNumber && t.seatNumber.toLowerCase().includes(search.toLowerCase()));
+    const matchesStatus = filterStatus === 'ALL' || t.status === filterStatus;
+    const matchesType = filterType === 'ALL' || t.ticketType === filterType;
+    return matchesSearch && matchesStatus && matchesType;
   });
 
   return (
@@ -137,11 +142,11 @@ export default function App() {
       <header className="header">
         <div className="logo-section">
           <div className="logo-icon">
-            <Layers color="#fff" size={24} />
+            <TicketIcon color="#fff" size={24} />
           </div>
           <div className="title-wrap">
-            <h1>Java Fullstack Workspace</h1>
-            <p>Spring Boot 3.4 REST API + React 18 Monorepo</p>
+            <h1>Ticket Sales Hub</h1>
+            <p>Live Event Inventory & Booking System</p>
           </div>
         </div>
 
@@ -161,9 +166,9 @@ export default function App() {
                 boxShadow: `0 0 8px ${serverOnline ? 'var(--accent-success)' : 'var(--accent-danger)'}`,
               }}
             />
-            {serverOnline ? 'Backend Connected (:8080)' : 'Backend Offline / Connecting...'}
+            {serverOnline ? 'Spring Boot API Online (:8080)' : 'API Offline / Reconnecting...'}
           </span>
-          <button className="btn btn-secondary" onClick={fetchData} title="Refresh Data">
+          <button className="btn btn-secondary" onClick={fetchData} title="Refresh Inventory">
             <RefreshCw size={16} />
           </button>
         </div>
@@ -172,28 +177,34 @@ export default function App() {
       {/* Metrics Row */}
       <div className="stats-grid">
         <StatsCard 
-          label="Total Tasks" 
+          label="Total Inventory" 
           value={stats.total} 
-          icon={Layers} 
+          icon={TicketIcon} 
           accentColor="#6366f1" 
         />
         <StatsCard 
-          label="Completed" 
-          value={stats.completed} 
-          icon={CheckCircle2} 
+          label="Tickets Available" 
+          value={stats.available} 
+          icon={Sparkles} 
           accentColor="#10b981" 
         />
         <StatsCard 
-          label="In Progress" 
-          value={stats.inProgress} 
+          label="Reserved" 
+          value={stats.reserved} 
           icon={Clock} 
           accentColor="#f59e0b" 
         />
         <StatsCard 
-          label="Pending" 
-          value={stats.pending} 
-          icon={AlertCircle} 
-          accentColor="#94a3b8" 
+          label="Sold" 
+          value={stats.sold} 
+          icon={CheckCircle} 
+          accentColor="#ec4899" 
+        />
+        <StatsCard 
+          label="Total Revenue" 
+          value={`$${stats.totalRevenue ? stats.totalRevenue.toLocaleString() : '0'}`} 
+          icon={DollarSign} 
+          accentColor="#38bdf8" 
         />
       </div>
 
@@ -204,7 +215,7 @@ export default function App() {
             <Search size={16} className="search-icon" />
             <input 
               type="text" 
-              placeholder="Search tasks..." 
+              placeholder="Search by event, seat, or buyer..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -215,67 +226,121 @@ export default function App() {
             onChange={(e) => setFilterStatus(e.target.value)}
           >
             <option value="ALL">All Statuses</option>
-            <option value="PENDING">Pending</option>
-            <option value="IN_PROGRESS">In Progress</option>
-            <option value="COMPLETED">Completed</option>
+            <option value="AVAILABLE">Available</option>
+            <option value="RESERVED">Reserved</option>
+            <option value="SOLD">Sold</option>
+          </select>
+          <select 
+            className="filter-select"
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+          >
+            <option value="ALL">All Tiers</option>
+            <option value="GENERAL">General</option>
+            <option value="VIP">VIP</option>
+            <option value="BALCONY">Balcony</option>
+            <option value="EARLY_BIRD">Early Bird</option>
           </select>
         </div>
 
         <button 
           className="btn btn-primary"
           onClick={() => {
-            setEditingTask(null);
+            setEditingTicket(null);
             setIsModalOpen(true);
           }}
         >
           <Plus size={18} />
-          New Task
+          Issue Ticket
         </button>
       </div>
 
-      {/* Tasks Grid */}
-      {loading && tasks.length === 0 ? (
+      {/* Tickets Grid */}
+      {loading && tickets.length === 0 ? (
         <div className="empty-state">
-          <p>Loading tasks from Spring Boot API...</p>
+          <p>Connecting to Ticket Sales Spring Boot backend...</p>
         </div>
-      ) : filteredTasks.length === 0 ? (
+      ) : filteredTickets.length === 0 ? (
         <div className="empty-state">
-          <h3>No tasks found</h3>
+          <h3>No tickets found</h3>
           <p>
-            {search || filterStatus !== 'ALL'
-              ? 'Try changing your search keywords or status filter.'
-              : 'Click "New Task" above to add your first task to the backend!'}
+            {search || filterStatus !== 'ALL' || filterType !== 'ALL'
+              ? 'Try adjusting your search criteria or filters.'
+              : 'Click "Issue Ticket" to add your first event ticket!'}
           </p>
         </div>
       ) : (
         <div className="tasks-grid">
-          {filteredTasks.map((t) => (
+          {filteredTickets.map((t) => (
             <div key={t.id} className="task-card">
               <div>
                 <div className="task-header">
-                  <h3 className="task-title">{t.title}</h3>
-                  <span className={`priority-badge priority-${t.priority ? t.priority.toLowerCase() : 'medium'}`}>
-                    {t.priority || 'MEDIUM'}
+                  <h3 className="task-title">{t.eventName}</h3>
+                  <span className={`priority-badge priority-${t.ticketType === 'VIP' ? 'high' : t.ticketType === 'EARLY_BIRD' ? 'low' : 'medium'}`}>
+                    {t.ticketType}
                   </span>
                 </div>
-                <p className="task-desc">{t.description || 'No description provided.'}</p>
+
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '1.4rem', fontWeight: '700', color: '#fff' }}>
+                    ${Number(t.price).toFixed(2)}
+                  </span>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                    • {t.seatNumber || 'GA'}
+                  </span>
+                </div>
+
+                {t.buyerName ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                    <User size={14} color="var(--accent-primary)" />
+                    <span>Buyer: <strong style={{ color: '#fff' }}>{t.buyerName}</strong></span>
+                  </div>
+                ) : (
+                  <p className="task-desc" style={{ fontStyle: 'italic', marginBottom: '1rem' }}>
+                    Unassigned — Ready for purchase
+                  </p>
+                )}
               </div>
 
               <div className="task-footer">
                 <span 
-                  className={`status-badge status-${t.status}`}
-                  onClick={() => handleToggleStatus(t)}
-                  title="Click to cycle status"
+                  className={`status-badge status-${t.status === 'AVAILABLE' ? 'COMPLETED' : t.status === 'RESERVED' ? 'IN_PROGRESS' : 'PENDING'}`}
+                  style={{
+                    backgroundColor: t.status === 'AVAILABLE' ? 'rgba(16, 185, 129, 0.15)' : t.status === 'RESERVED' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(236, 72, 153, 0.15)',
+                    color: t.status === 'AVAILABLE' ? 'var(--accent-success)' : t.status === 'RESERVED' ? 'var(--accent-warning)' : '#f472b6',
+                    border: `1px solid ${t.status === 'AVAILABLE' ? 'rgba(16, 185, 129, 0.3)' : t.status === 'RESERVED' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(236, 72, 153, 0.3)'}`
+                  }}
+                  title="Ticket Status"
                 >
-                  {t.status === 'COMPLETED' ? '✓ Completed' : t.status === 'IN_PROGRESS' ? '● In Progress' : '○ Pending'}
+                  {t.status === 'AVAILABLE' ? '● Available' : t.status === 'RESERVED' ? '◐ Reserved' : '✓ Sold'}
                 </span>
 
                 <div className="card-actions">
+                  {t.status === 'AVAILABLE' && (
+                    <button 
+                      className="btn-icon" 
+                      style={{ color: 'var(--accent-success)' }}
+                      title="Quick Sell to Guest"
+                      onClick={() => handleQuickStatus(t, 'SOLD', 'Walk-in Customer')}
+                    >
+                      <ShoppingBag size={16} />
+                    </button>
+                  )}
+                  {t.status === 'SOLD' && (
+                    <button 
+                      className="btn-icon" 
+                      style={{ color: 'var(--accent-warning)' }}
+                      title="Refund / Return to Available"
+                      onClick={() => handleQuickStatus(t, 'AVAILABLE')}
+                    >
+                      <RefreshCw size={16} />
+                    </button>
+                  )}
                   <button 
                     className="btn-icon" 
-                    title="Edit task"
+                    title="Edit ticket"
                     onClick={() => {
-                      setEditingTask(t);
+                      setEditingTicket(t);
                       setIsModalOpen(true);
                     }}
                   >
@@ -283,8 +348,8 @@ export default function App() {
                   </button>
                   <button 
                     className="btn-icon delete" 
-                    title="Delete task"
-                    onClick={() => handleDeleteTask(t.id)}
+                    title="Delete ticket"
+                    onClick={() => handleDeleteTicket(t.id)}
                   >
                     <Trash2 size={16} />
                   </button>
@@ -296,11 +361,11 @@ export default function App() {
       )}
 
       {/* Modal Dialog */}
-      <TaskModal 
+      <TicketModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSave={handleSaveTask}
-        task={editingTask}
+        onSave={handleSaveTicket}
+        ticket={editingTicket}
       />
     </div>
   );

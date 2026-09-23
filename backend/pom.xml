@@ -12,10 +12,10 @@
     </parent>
 
     <groupId>com.example</groupId>
-    <artifactId>fullstack-backend</artifactId>
+    <artifactId>ticket-sales-backend</artifactId>
     <version>1.0.0</version>
-    <name>fullstack-backend</name>
-    <description>Spring Boot REST API for Fullstack Monorepo</description>
+    <name>ticket-sales-backend</name>
+    <description>Ticket Sales Spring Boot REST API</description>
 
     <properties>
         <java.version>21</java.version>
