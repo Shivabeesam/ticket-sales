@@ -28,6 +28,8 @@ import HourlyVelocityChart from './HourlyVelocityChart';
 export default function BoxOfficeDashboard() {
   const [movies, setMovies] = useState([]);
   const [selectedMovieId, setSelectedMovieId] = useState(null);
+  const [selectedDate, setSelectedDate] = useState('ALL');
+  const [selectedPlatform, setSelectedPlatform] = useState('ALL');
   const [report, setReport] = useState(null);
   const [liveEvents, setLiveEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,29 +65,42 @@ export default function BoxOfficeDashboard() {
     fetchMovies();
   }, []);
 
-  // Fetch report & events whenever selectedMovieId changes
+  // Fetch report & events whenever selectedMovieId, selectedDate, or selectedPlatform changes
   useEffect(() => {
     if (selectedMovieId) {
-      fetchReportAndEvents(selectedMovieId);
+      fetchReportAndEvents(selectedMovieId, selectedDate, selectedPlatform);
     } else {
       setReport(null);
       setLiveEvents([]);
       setLoading(false);
     }
-  }, [selectedMovieId]);
+  }, [selectedMovieId, selectedDate, selectedPlatform]);
 
   // Live Auto-Refresh polling (every 4 seconds)
   useEffect(() => {
     let interval = null;
     if (autoRefresh && selectedMovieId) {
       interval = setInterval(() => {
-        fetchSilent(selectedMovieId);
+        fetchSilent(selectedMovieId, selectedDate, selectedPlatform);
       }, 4000);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [autoRefresh, selectedMovieId]);
+  }, [autoRefresh, selectedMovieId, selectedDate, selectedPlatform]);
+
+  const formatDateLabel = (dStr) => {
+    if (!dStr || dStr === 'ALL') return 'All Days (Advance Total)';
+    const parts = dStr.split('-');
+    if (parts.length < 3) return dStr;
+    const d = parts[2];
+    const m = parts[1];
+    if (dStr === '2026-09-23') return `Today (${d} Sep)`;
+    if (dStr === '2026-09-24') return `Tomorrow (${d} Sep)`;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthName = months[parseInt(m, 10) - 1] || 'Sep';
+    return `${d} ${monthName}`;
+  };
 
   const fetchMovies = async () => {
     try {
@@ -106,12 +121,14 @@ export default function BoxOfficeDashboard() {
     }
   };
 
-  const fetchReportAndEvents = async (movieId) => {
+  const fetchReportAndEvents = async (movieId, date = selectedDate, platform = selectedPlatform) => {
     try {
       setRefreshing(true);
+      const dateParam = encodeURIComponent(date || 'ALL');
+      const platParam = encodeURIComponent(platform || 'ALL');
       const [repRes, evtRes] = await Promise.all([
-        fetch(`/api/boxoffice/movies/${movieId}/report`),
-        fetch(`/api/boxoffice/movies/${movieId}/live-events`)
+        fetch(`/api/boxoffice/movies/${movieId}/report?date=${dateParam}&platform=${platParam}`),
+        fetch(`/api/boxoffice/movies/${movieId}/live-events?date=${dateParam}&platform=${platParam}`)
       ]);
 
       if (repRes.ok) {
@@ -130,11 +147,13 @@ export default function BoxOfficeDashboard() {
     }
   };
 
-  const fetchSilent = async (movieId) => {
+  const fetchSilent = async (movieId, date = selectedDate, platform = selectedPlatform) => {
     try {
+      const dateParam = encodeURIComponent(date || 'ALL');
+      const platParam = encodeURIComponent(platform || 'ALL');
       const [repRes, evtRes] = await Promise.all([
-        fetch(`/api/boxoffice/movies/${movieId}/report`),
-        fetch(`/api/boxoffice/movies/${movieId}/live-events`)
+        fetch(`/api/boxoffice/movies/${movieId}/report?date=${dateParam}&platform=${platParam}`),
+        fetch(`/api/boxoffice/movies/${movieId}/live-events?date=${dateParam}&platform=${platParam}`)
       ]);
 
       if (repRes.ok) {
@@ -155,12 +174,14 @@ export default function BoxOfficeDashboard() {
     setIsSyncing(true);
     setSyncFeedback(null);
     try {
-      const res = await fetch(`/api/boxoffice/movies/${selectedMovieId}/sync-live`, { method: 'POST' });
+      const dateParam = encodeURIComponent(selectedDate || 'ALL');
+      const platParam = encodeURIComponent(selectedPlatform || 'ALL');
+      const res = await fetch(`/api/boxoffice/movies/${selectedMovieId}/sync-live?date=${dateParam}&platform=${platParam}`, { method: 'POST' });
       if (res.ok) {
         const data = await res.json();
         setSyncFeedback(data.message);
         setTimeout(() => setSyncFeedback(null), 5000);
-        await fetchReportAndEvents(selectedMovieId);
+        await fetchReportAndEvents(selectedMovieId, selectedDate, selectedPlatform);
       }
     } catch (err) {
       console.error('Live sync error:', err);
@@ -588,7 +609,162 @@ export default function BoxOfficeDashboard() {
       ) : report ? (
         <>
           {/* ───────────────────────────────────────────────────────────── */}
-          {/* 2. REAL-TIME BOOKING PULSE & INGESTION FEED */}
+          {/* 2. FILTER CONTROL BAR: DUAL PLATFORM & DAY-WISE OPTIONS */}
+          {/* ───────────────────────────────────────────────────────────── */}
+          <div
+            style={{
+              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '1rem 1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+              boxShadow: '0 4px 20px -5px rgba(0,0,0,0.4)'
+            }}
+          >
+            {/* Top row: Platform Filter */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Platform:
+                </span>
+                
+                {/* All Platforms */}
+                <button
+                  onClick={() => setSelectedPlatform('ALL')}
+                  style={{
+                    padding: '0.4rem 0.85rem',
+                    borderRadius: 'var(--radius-full)',
+                    border: selectedPlatform === 'ALL' ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                    background: selectedPlatform === 'ALL' ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.04)',
+                    color: selectedPlatform === 'ALL' ? '#fff' : 'var(--text-muted)',
+                    fontSize: '0.78rem',
+                    fontWeight: selectedPlatform === 'ALL' ? 800 : 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span>🌐 All Platforms (BMS + District)</span>
+                </button>
+
+                {/* BookMyShow */}
+                <button
+                  onClick={() => setSelectedPlatform('BookMyShow')}
+                  style={{
+                    padding: '0.4rem 0.85rem',
+                    borderRadius: 'var(--radius-full)',
+                    border: selectedPlatform === 'BookMyShow' ? '1px solid #ef4444' : '1px solid var(--border-subtle)',
+                    background: selectedPlatform === 'BookMyShow' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.04)',
+                    color: selectedPlatform === 'BookMyShow' ? '#fff' : 'var(--text-muted)',
+                    fontSize: '0.78rem',
+                    fontWeight: selectedPlatform === 'BookMyShow' ? 800 : 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    boxShadow: selectedPlatform === 'BookMyShow' ? '0 0 12px rgba(239, 68, 68, 0.35)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444' }} />
+                  <span>BookMyShow (BMS)</span>
+                </button>
+
+                {/* District */}
+                <button
+                  onClick={() => setSelectedPlatform('District')}
+                  style={{
+                    padding: '0.4rem 0.85rem',
+                    borderRadius: 'var(--radius-full)',
+                    border: selectedPlatform === 'District' ? '1px solid #a855f7' : '1px solid var(--border-subtle)',
+                    background: selectedPlatform === 'District' ? 'rgba(168, 85, 247, 0.25)' : 'rgba(255, 255, 255, 0.04)',
+                    color: selectedPlatform === 'District' ? '#fff' : 'var(--text-muted)',
+                    fontSize: '0.78rem',
+                    fontWeight: selectedPlatform === 'District' ? 800 : 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    boxShadow: selectedPlatform === 'District' ? '0 0 12px rgba(168, 85, 247, 0.35)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#a855f7' }} />
+                  <span>District (by Zomato)</span>
+                </button>
+              </div>
+
+              {/* Status Badge */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                <span>Active Scope:</span>
+                <span style={{ 
+                  color: selectedPlatform === 'BookMyShow' ? '#f87171' : (selectedPlatform === 'District' ? '#c084fc' : '#818cf8'),
+                  fontWeight: 800,
+                  background: 'rgba(255,255,255,0.06)',
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: 'var(--radius-sm)'
+                }}>
+                  {selectedPlatform === 'ALL' ? 'Pan-India Industry Total' : selectedPlatform} • {formatDateLabel(selectedDate)}
+                </span>
+              </div>
+            </div>
+
+            {/* Bottom row: Day-Wise Options */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.75rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Day-Wise Options:
+              </span>
+
+              {/* All Days */}
+              <button
+                onClick={() => setSelectedDate('ALL')}
+                style={{
+                  padding: '0.3rem 0.75rem',
+                  borderRadius: 'var(--radius-full)',
+                  border: selectedDate === 'ALL' ? '1px solid #10b981' : '1px solid var(--border-subtle)',
+                  background: selectedDate === 'ALL' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                  color: selectedDate === 'ALL' ? '#34d399' : 'var(--text-muted)',
+                  fontSize: '0.75rem',
+                  fontWeight: selectedDate === 'ALL' ? 700 : 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                All Days (Advance Total)
+              </button>
+
+              {/* Dynamic Dates from Report */}
+              {(report?.availableDates || ['2026-09-23', '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27']).map((d) => {
+                const isSelected = selectedDate === d;
+                return (
+                  <button
+                    key={d}
+                    onClick={() => setSelectedDate(d)}
+                    style={{
+                      padding: '0.3rem 0.75rem',
+                      borderRadius: 'var(--radius-full)',
+                      border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                      background: isSelected ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.03)',
+                      color: isSelected ? '#fff' : 'var(--text-muted)',
+                      fontSize: '0.75rem',
+                      fontWeight: isSelected ? 700 : 500,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {formatDateLabel(d)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ───────────────────────────────────────────────────────────── */}
+          {/* 3. REAL-TIME BOOKING PULSE & INGESTION FEED */}
           {/* ───────────────────────────────────────────────────────────── */}
           <div
             style={{
@@ -609,7 +785,11 @@ export default function BoxOfficeDashboard() {
                   <span style={{ position: 'relative', width: 10, height: 10, borderRadius: '50%', background: '#10b981' }} />
                 </span>
                 <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  100% Real Live Theatrical Feed • Scraped from District (by Zomato)
+                  {selectedPlatform === 'BookMyShow'
+                    ? '100% Real Live Theatrical Feed • BookMyShow (BMS Network)'
+                    : selectedPlatform === 'District'
+                    ? '100% Real Live Theatrical Feed • District (by Zomato)'
+                    : '100% Real Live Theatrical Feed • BookMyShow & District (by Zomato)'}
                 </h3>
               </div>
               <div style={{ fontSize: '0.75rem', color: '#a5b4fc', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -919,39 +1099,56 @@ export default function BoxOfficeDashboard() {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
-                {report.platformShares.map((p) => (
-                  <div
-                    key={p.platformName}
-                    style={{
-                      padding: '1.25rem',
-                      borderRadius: 'var(--radius-md)',
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      border: '1px solid var(--border-subtle)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.65rem'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: p.color }} />
-                        <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#fff' }}>{p.platformName}</span>
+                {report.platformShares.map((p) => {
+                  const isFiltered = (selectedPlatform === p.platformName) || 
+                                     (selectedPlatform === 'BookMyShow' && p.platformName.toLowerCase().includes('bookmyshow')) ||
+                                     (selectedPlatform === 'District' && p.platformName.toLowerCase().includes('district'));
+                  return (
+                    <div
+                      key={p.platformName}
+                      onClick={() => {
+                        const platKey = p.platformName.toLowerCase().includes('bookmyshow') ? 'BookMyShow' : 'District';
+                        setSelectedPlatform(selectedPlatform === platKey ? 'ALL' : platKey);
+                      }}
+                      title={`Click to filter dashboard to ${p.platformName}`}
+                      style={{
+                        padding: '1.25rem',
+                        borderRadius: 'var(--radius-md)',
+                        background: isFiltered ? `${p.color}15` : 'rgba(255, 255, 255, 0.03)',
+                        border: isFiltered ? `2px solid ${p.color}` : '1px solid var(--border-subtle)',
+                        boxShadow: isFiltered ? `0 0 15px ${p.color}35` : 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.65rem',
+                        transition: 'all 0.2s ease',
+                        position: 'relative'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: p.color }} />
+                          <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#fff' }}>{p.platformName}</span>
+                        </div>
+                        <span style={{ fontSize: '1.15rem', fontWeight: 900, color: p.color }}>
+                          {p.marketSharePercentage}%
+                        </span>
                       </div>
-                      <span style={{ fontSize: '1.15rem', fontWeight: 900, color: p.color }}>
-                        {p.marketSharePercentage}%
-                      </span>
-                    </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      <span>Tracked Shows: <strong>{p.trackedShows.toLocaleString()}</strong></span>
-                      <span>Gross: <strong style={{ color: 'var(--accent-success)' }}>₹{p.grossCrores.toFixed(2)} Cr</strong></span>
-                    </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        <span>Tracked Shows: <strong>{p.trackedShows.toLocaleString()}</strong></span>
+                        <span>Gross: <strong style={{ color: 'var(--accent-success)' }}>₹{p.grossCrores.toFixed(2)} Cr</strong></span>
+                      </div>
 
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-                      {p.bookedTickets.toLocaleString()} Tickets Sold
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                        <span>{p.bookedTickets.toLocaleString()} Tickets Sold</span>
+                        <span style={{ fontSize: '0.7rem', color: p.color, fontWeight: 700 }}>
+                          {isFiltered ? '✓ Filter Active' : 'Filter by this →'}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

@@ -172,7 +172,7 @@ public class DistrictLiveScraperService {
                             String circuitLabel, String movieId, String movieTitle, 
                             String targetDate, LiveScrapeResult result) {
         String path = String.format("/movies/%s-movie-tickets-in-%s-%s", cleanSlug, cityKey, districtContentId);
-        if (targetDate != null && !targetDate.equalsIgnoreCase("ALL") && !targetDate.isBlank()) {
+        if (targetDate != null && !targetDate.equalsIgnoreCase("ALL") && !targetDate.equals("2026-09-23") && !targetDate.isBlank()) {
             path += "?fromdate=" + targetDate;
         }
         String fullUrl = "https://www.district.in" + path;

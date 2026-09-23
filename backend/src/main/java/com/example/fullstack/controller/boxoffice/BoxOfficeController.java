@@ -46,27 +46,39 @@ public class BoxOfficeController {
     }
 
     @GetMapping("/movies/{id}/report")
-    public ResponseEntity<MovieBoxOfficeReport> getMovieReport(@PathVariable String id) {
-        return trackingService.getMovieReport(id)
+    public ResponseEntity<MovieBoxOfficeReport> getMovieReport(
+            @PathVariable String id,
+            @RequestParam(required = false, defaultValue = "ALL") String date,
+            @RequestParam(required = false, defaultValue = "ALL") String platform) {
+        return trackingService.getMovieReport(id, date, platform)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/movies/{id}/circuits")
-    public ResponseEntity<List<CityCircuitStats>> getMovieCircuits(@PathVariable String id) {
-        return trackingService.getMovieReport(id)
+    public ResponseEntity<List<CityCircuitStats>> getMovieCircuits(
+            @PathVariable String id,
+            @RequestParam(required = false, defaultValue = "ALL") String date,
+            @RequestParam(required = false, defaultValue = "ALL") String platform) {
+        return trackingService.getMovieReport(id, date, platform)
                 .map(r -> ResponseEntity.ok(r.getCircuits()))
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/movies/{id}/live-events")
-    public ResponseEntity<List<LiveBookingEvent>> getLiveEvents(@PathVariable String id) {
-        return ResponseEntity.ok(trackingService.getLiveEvents(id));
+    public ResponseEntity<List<LiveBookingEvent>> getLiveEvents(
+            @PathVariable String id,
+            @RequestParam(required = false, defaultValue = "ALL") String date,
+            @RequestParam(required = false, defaultValue = "ALL") String platform) {
+        return ResponseEntity.ok(trackingService.getLiveEvents(id, date, platform));
     }
 
     @PostMapping("/movies/{id}/sync-live")
-    public ResponseEntity<Map<String, Object>> syncLiveShows(@PathVariable String id) {
-        Map<String, Object> result = trackingService.syncLiveCircuitScrape(id);
+    public ResponseEntity<Map<String, Object>> syncLiveShows(
+            @PathVariable String id,
+            @RequestParam(required = false, defaultValue = "ALL") String date,
+            @RequestParam(required = false, defaultValue = "ALL") String platform) {
+        Map<String, Object> result = trackingService.syncLiveCircuitScrape(id, date, platform);
         return ResponseEntity.ok(result);
     }
 
