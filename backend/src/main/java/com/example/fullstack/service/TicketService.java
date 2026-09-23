@@ -12,12 +12,7 @@ public class TicketService {
     private final Map<String, Ticket> ticketStore = new ConcurrentHashMap<>();
 
     public TicketService() {
-        // Seed default initial tickets
-        createTicket(new Ticket(null, "Coldplay Music of the Spheres", "VIP", 199.99, "Sec 102 - Row A", "SOLD", "Sarah Jenkins"));
-        createTicket(new Ticket(null, "Coldplay Music of the Spheres", "GENERAL", 79.99, "Floor GA - #412", "RESERVED", "Michael Scott"));
-        createTicket(new Ticket(null, "Global Tech Summit 2026", "VIP", 299.00, "Hall A - Booth 12", "AVAILABLE", null));
-        createTicket(new Ticket(null, "Global Tech Summit 2026", "EARLY_BIRD", 129.50, "Hall B - General", "SOLD", "David Miller"));
-        createTicket(new Ticket(null, "Broadway Musical: Hamilton", "BALCONY", 89.00, "Balcony B - Seat 14", "AVAILABLE", null));
+        // Starts clean with zero static/mock data
     }
 
     public List<Ticket> getAllTickets() {
